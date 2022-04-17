@@ -45,7 +45,7 @@ func pullLatestData(apiUrl string, typeOfPull string) vocaResponse {
 
 // CONVERT OBJECT TO RSS
 
-func rsser(latestObject vocaResponse) string {
+func rsser(latestObject *vocaResponse) string {
   now := time.Now()
 
 	typeOfPull := latestObject.TypeOfPull
@@ -102,19 +102,21 @@ func main() {
   albumsUrl := "https://vocadb.net/api/albums?maxResults=50&sort=AdditionDate"
 
   latestSongs := pullLatestData(songsUrl, "Song")
+  pointerLatestSongs := &latestSongs
   latestAlbums := pullLatestData(albumsUrl, "Album")
+  pointerLatestAlbums := &latestAlbums
 
-  rssGenSongs := rsser(latestSongs)
+  rssGenSongs := rsser(pointerLatestSongs)
   pointerRssGenSongs := &rssGenSongs
-	rssGenAlbums := rsser(latestAlbums)
+	rssGenAlbums := rsser(pointerLatestAlbums)
   pointerRssGenAlbums := &rssGenAlbums
 
   go func() {
     for {
       latestSongs = pullLatestData(songsUrl, "Song")
       latestAlbums = pullLatestData(albumsUrl, "Album")
-      rssGenSongs = rsser(latestSongs)
-      rssGenAlbums = rsser(latestAlbums)
+      rssGenSongs = rsser(pointerLatestSongs)
+      rssGenAlbums = rsser(pointerLatestAlbums)
       <-time.After(5 * time.Minute)
     }
   }()
