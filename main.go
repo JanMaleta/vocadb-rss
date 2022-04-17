@@ -122,14 +122,14 @@ func main() {
 	rssGenSongs := rsser(latestSongs)
 
 	go func() {
-    for {
+		for {
 			latestAlbums = pullLatestAlbums()
 			latestSongs = pullLatestSongs()
 			rssGenAlbums = rsser(latestAlbums)
 			rssGenSongs = rsser(latestSongs)
 			fmt.Println("Refreshed APIs")
 			<-time.After(1 * time.Minute)
-    }
+		}
 	}()
 	httpServer(rssGenAlbums, rssGenSongs)
 }
