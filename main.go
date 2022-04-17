@@ -2,7 +2,6 @@ package main
 
 import (
   "fmt"
-  _ "reflect"
   "time"
   "io/ioutil"
   "log"
@@ -11,7 +10,6 @@ import (
   "github.com/gorilla/feeds"
 )
 
-// PULL DATA FROM API AND PARSE IT TO OBJECT
 type vocaResponse struct {
   Items[] vocaItems `json:"items"`
   TypeOfPull string
@@ -24,48 +22,33 @@ type vocaItems struct {
   DefaultNameLanguage string `json:"defaultNameLanguage"`
   Status bool `json:"status",omitempty`
   ReleaseDate albumsReleaseDate `json:"releaseDate",omitempty`
-  PublishDate string `json:"publishDate",omitempty` //RETURNED ONLY IN SONGS
+  PublishDate string `json:"publishDate",omitempty` //Returned only in songs
 }
 type albumsReleaseDate struct {
-  Formatted string `json:"formatted",omitempty` //RETURNED ONLY IN ALBUMS
+  Formatted string `json:"formatted",omitempty` //Returned only in albums
 }
 
-func pullLatestAlbums() vocaResponse {
-  request, err: = http.Get("https://vocadb.net/api/albums?maxResults=5&sort=AdditionDate")
+func pullLatestData(apiUrl string, typeOfPull string) vocaResponse {
+  request, err := http.Get(apiUrl)
   if err != nil {
     log.Fatalln(err)
   }
-  body, err: = ioutil.ReadAll(request.Body)
+  body, err := ioutil.ReadAll(request.Body)
   if err != nil {
     log.Fatalln(err)
   }
   var jAlbums vocaResponse
   json.Unmarshal(body, & jAlbums)
-  jAlbums.TypeOfPull = "Album"
+  jAlbums.TypeOfPull = typeOfPull
   return jAlbums
-}
-
-func pullLatestSongs() vocaResponse {
-  request, err: = http.Get("https://vocadb.net/api/songs?maxResults=5&sort=AdditionDate")
-  if err != nil {
-    log.Fatalln(err)
-  }
-  body, err: = ioutil.ReadAll(request.Body)
-  if err != nil {
-    log.Fatalln(err)
-  }
-  var jSongs vocaResponse
-  jSongs.TypeOfPull = "Song"
-  json.Unmarshal(body, & jSongs)
-  return jSongs
 }
 
 // CONVERT OBJECT TO RSS
 
 func rsser(latestObject vocaResponse) string {
-  now: = time.Now()
+  now := time.Now()
 
-    typeOfPull: = latestObject.TypeOfPull
+	typeOfPull := latestObject.TypeOfPull
   var pullApi string
   if typeOfPull == "Album" {
     pullApi = "https://vocadb.net/Al/"
@@ -73,71 +56,67 @@ func rsser(latestObject vocaResponse) string {
     pullApi = "https://vocadb.net/S/"
   }
 
-  feed: = & feeds.Feed {
+  feed := &feeds.Feed {
     Title: "vocadb albums RSS",
-    Link: & feeds.Link {
-      Href: "https://czeczacha.ovh"
-    },
+    Link: &feeds.Link { Href: "https://czeczacha.ovh" },
     Description: "vocadb rss feed with latest albums",
-    Author: & feeds.Author {
-      Name: "Jan Maleta"
-    },
+    Author: &feeds.Author { Name: "Jan Maleta" },
     Created: now,
   }
 
-    for _,
-  vocaItems: = range latestObject.Items {
+  for _, vocaItems:= range latestObject.Items {
     feed.Items = append(feed.Items, & feeds.Item {
       Title: fmt.Sprintf("%s - %s", vocaItems.Name, vocaItems.ArtistString),
-      Link: & feeds.Link {
-        Href: fmt.Sprint(pullApi, vocaItems.ID)
-      },
+      Link: &feeds.Link { Href: fmt.Sprint(pullApi, vocaItems.ID) },
       Description: fmt.Sprintf("%s by %s", typeOfPull, vocaItems.Name),
-      Author: & feeds.Author {
-        Name: vocaItems.Name
-      },
+      Author: &feeds.Author { Name: vocaItems.Name },
       Created: now,
     }, )
   }
 
     rss,
-  err: = feed.ToRss()
+  err := feed.ToRss()
   if err != nil {
     log.Fatal(err)
   }
   return rss
 }
 
-func httpServer(rssGenSongs string, rssGenAlbums string) {
+func httpServer(rssGenSongs *string, rssGenAlbums *string) {
   // RUN SERVER
   http.HandleFunc("/songs", func(w http.ResponseWriter, r * http.Request) {
-    fmt.Fprintf(w, rssGenSongs)
+    fmt.Fprintf(w, *rssGenSongs)
   })
   http.HandleFunc("/albums", func(w http.ResponseWriter, r * http.Request) {
-    fmt.Fprintf(w, rssGenAlbums)
+    fmt.Fprintf(w, *rssGenAlbums)
   })
   fmt.Printf("Starting server at port 8080\n")
-  if err: = http.ListenAndServe(":8080", nil);
+  if err := http.ListenAndServe(":8080", nil);
   err != nil {
     log.Fatal(err)
   }
 }
 
 func main() {
-  latestAlbums: = pullLatestAlbums()
-  latestSongs: = pullLatestSongs()
+  songsUrl := "https://vocadb.net/api/songs?maxResults=50&sort=AdditionDate"
+  albumsUrl := "https://vocadb.net/api/albums?maxResults=50&sort=AdditionDate"
 
-    rssGenAlbums: = rsser(latestAlbums)
-  rssGenSongs: = rsser(latestSongs)
+  latestSongs := pullLatestData(songsUrl, "Song")
+  latestAlbums := pullLatestData(albumsUrl, "Album")
 
-    go func() {
+  rssGenSongs := rsser(latestSongs)
+  pointerRssGenSongs := &rssGenSongs
+	rssGenAlbums := rsser(latestAlbums)
+  pointerRssGenAlbums := &rssGenAlbums
+
+  go func() {
     for {
-      latestAlbums = pullLatestAlbums()
-      latestSongs = pullLatestSongs()
-      rssGenAlbums = rsser(latestAlbums)
+      latestSongs = pullLatestData(songsUrl, "Song")
+      latestAlbums = pullLatestData(albumsUrl, "Album")
       rssGenSongs = rsser(latestSongs)
-      fmt.Println("Refreshed APIs") < -time.After(1 * time.Minute)
+      rssGenAlbums = rsser(latestAlbums)
+      <-time.After(5 * time.Minute)
     }
   }()
-  httpServer(rssGenAlbums, rssGenSongs)
+  httpServer(pointerRssGenSongs, pointerRssGenAlbums)
 }
