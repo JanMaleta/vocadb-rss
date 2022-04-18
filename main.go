@@ -56,6 +56,8 @@ func rsser(latestObject *vocaResponse) string {
     pullApi = "https://vocadb.net/S/"
   }
 
+  timeLayout := "2006-01-02T15:04:05.999"
+
   feed := &feeds.Feed {
     Title: "vocadb albums RSS",
     Link: &feeds.Link { Href: "https://czeczacha.ovh" },
@@ -65,12 +67,17 @@ func rsser(latestObject *vocaResponse) string {
   }
 
   for _, vocaItems:= range latestObject.Items {
+    timeRaw := vocaItems.CreateDate
+    timeParsed, err := time.Parse(timeLayout, timeRaw)
+    if err != nil {
+      fmt.Println(err)
+    }
     feed.Items = append(feed.Items, & feeds.Item {
       Title: fmt.Sprintf("%s - %s", vocaItems.Name, vocaItems.ArtistString),
       Link: &feeds.Link { Href: fmt.Sprint(pullApi, vocaItems.ID) },
       Description: fmt.Sprintf("%s by %s", typeOfPull, vocaItems.Name),
       Author: &feeds.Author { Name: vocaItems.Name },
-      Created: now,
+      Created: timeParsed,
     }, )
   }
 
