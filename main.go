@@ -43,8 +43,6 @@ func pullLatestData(apiUrl string, typeOfPull string) vocaResponse {
   return jAlbums
 }
 
-// CONVERT OBJECT TO RSS
-
 func rsser(latestObject *vocaResponse) string {
   now := time.Now()
 
@@ -56,8 +54,6 @@ func rsser(latestObject *vocaResponse) string {
     pullApi = "https://vocadb.net/S/"
   }
 
-  timeLayout := "2006-01-02T15:04:05.999"
-
   feed := &feeds.Feed {
     Title: "vocadb albums RSS",
     Link: &feeds.Link { Href: "https://czeczacha.ovh" },
@@ -67,30 +63,27 @@ func rsser(latestObject *vocaResponse) string {
   }
 
   for _, vocaItems:= range latestObject.Items {
-    timeRaw := vocaItems.CreateDate
-    timeParsed, err := time.Parse(timeLayout, timeRaw)
+    timeParsed, err := time.Parse("2006-01-02T15:04:05.999", vocaItems.CreateDate)
     if err != nil {
       fmt.Println(err)
     }
     feed.Items = append(feed.Items, & feeds.Item {
-      Title: fmt.Sprintf("%s - %s", vocaItems.Name, vocaItems.ArtistString),
+      Title: fmt.Sprintf("%s - %s", vocaItems.ArtistString, vocaItems.Name),
       Link: &feeds.Link { Href: fmt.Sprint(pullApi, vocaItems.ID) },
-      Description: fmt.Sprintf("%s by %s", typeOfPull, vocaItems.Name),
-      Author: &feeds.Author { Name: vocaItems.Name },
+      Description: fmt.Sprintf("%s by %s", typeOfPull, vocaItems.ArtistString),
+      Author: &feeds.Author { Name: vocaItems.ArtistString },
       Created: timeParsed,
     }, )
   }
 
-    rss,
-  err := feed.ToRss()
-  if err != nil {
-    log.Fatal(err)
-  }
+  rss, err := feed.ToRss()
+    if err != nil {
+      log.Fatal(err)
+    }
   return rss
 }
 
 func httpServer(rssGenSongs *string, rssGenAlbums *string) {
-  // RUN SERVER
   http.HandleFunc("/songs", func(w http.ResponseWriter, r * http.Request) {
     fmt.Fprintf(w, *rssGenSongs)
   })
