@@ -2,6 +2,7 @@ package main
 
 import (
   "fmt"
+  "bytes"
   "time"
   "io/ioutil"
   "log"
@@ -23,9 +24,15 @@ type vocaItems struct {
   Status bool `json:"status",omitempty`
   ReleaseDate albumsReleaseDate `json:"releaseDate",omitempty`
   PublishDate string `json:"publishDate",omitempty` //Returned only in songs
+  Pvs[] pvs `json:"pvs,omitempty`
 }
 type albumsReleaseDate struct {
   Formatted string `json:"formatted",omitempty` //Returned only in albums
+}
+type pvs struct {
+  Author string `json:"author"`
+  Service string `json:"service"`
+  Url string `json:"url"`
 }
 
 func pullLatestData(apiUrl string, typeOfPull string) vocaResponse {
@@ -47,7 +54,7 @@ func rsser(latestObject *vocaResponse) string {
   now := time.Now()
 
   typeOfPull := latestObject.TypeOfPull
-  pullApi = "https://vocadb.net/S/"
+  pullApi := "https://vocadb.net/S/"
   if typeOfPull == "Album" {
     pullApi = "https://vocadb.net/Al/"
   }
@@ -60,15 +67,19 @@ func rsser(latestObject *vocaResponse) string {
     Created: now,
   }
 
-  for _, vocaItems:= range latestObject.Items {
+  for _, vocaItems := range latestObject.Items {
     timeParsed, err := time.Parse("2006-01-02T15:04:05.999", vocaItems.CreateDate)
     if err != nil {
       fmt.Println(err)
     }
+    var pvsList bytes.Buffer
+    for _, pvs := range vocaItems.Pvs {
+      pvsList.WriteString(fmt.Sprintf("%s - %s&lt;br&gt;", pvs.Service, pvs.Url))
+    }
     feed.Items = append(feed.Items, & feeds.Item {
       Title: fmt.Sprintf("%s - %s", vocaItems.ArtistString, vocaItems.Name),
       Link: &feeds.Link { Href: fmt.Sprint(pullApi, vocaItems.ID) },
-      Description: fmt.Sprintf("%s by %s", typeOfPull, vocaItems.ArtistString),
+      Description: fmt.Sprintf("%s by %s&lt;br&gt;%s", typeOfPull, vocaItems.ArtistString, pvsList.String()),
       Author: &feeds.Author { Name: vocaItems.ArtistString },
       Created: timeParsed,
     }, )
@@ -96,8 +107,8 @@ func httpServer(rssGenSongs *string, rssGenAlbums *string) {
 }
 
 func main() {
-  songsUrl := "https://vocadb.net/api/songs?maxResults=50&sort=AdditionDate"
-  albumsUrl := "https://vocadb.net/api/albums?maxResults=50&sort=AdditionDate"
+  songsUrl := "https://vocadb.net/api/songs?maxResults=50&sort=AdditionDate&fields=PVs"
+  albumsUrl := "https://vocadb.net/api/albums?maxResults=50&sort=AdditionDate&fields=PVs"
 
   latestSongs := pullLatestData(songsUrl, "Song")
   pointerLatestSongs := &latestSongs
