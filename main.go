@@ -46,7 +46,7 @@ func pullLatestData(apiUrl string, typeOfPull string) vocaResponse {
 func rsser(latestObject *vocaResponse) string {
   now := time.Now()
 
-	typeOfPull := latestObject.TypeOfPull
+  typeOfPull := latestObject.TypeOfPull
   var pullApi string
   if typeOfPull == "Album" {
     pullApi = "https://vocadb.net/Al/"
@@ -108,7 +108,7 @@ func main() {
 
   rssGenSongs := rsser(pointerLatestSongs)
   pointerRssGenSongs := &rssGenSongs
-	rssGenAlbums := rsser(pointerLatestAlbums)
+  rssGenAlbums := rsser(pointerLatestAlbums)
   pointerRssGenAlbums := &rssGenAlbums
 
   go func() {
