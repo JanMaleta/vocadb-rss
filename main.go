@@ -47,11 +47,9 @@ func rsser(latestObject *vocaResponse) string {
   now := time.Now()
 
   typeOfPull := latestObject.TypeOfPull
-  var pullApi string
+  pullApi = "https://vocadb.net/S/"
   if typeOfPull == "Album" {
     pullApi = "https://vocadb.net/Al/"
-  } else {
-    pullApi = "https://vocadb.net/S/"
   }
 
   feed := &feeds.Feed {
